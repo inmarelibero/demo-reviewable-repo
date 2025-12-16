@@ -1,0 +1,36 @@
+# Create a PR when a feature/* branch is pushed
+#
+# @dev if the pushed branch is already involved in an existing PR, a new PR will not be created
+
+name: Pull Request on Branch Push
+on:
+  push:
+    branches: 'feature/*'
+jobs:
+  auto-pull-request:
+    name: PullRequestAction
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Check for existing pull requests
+        id: check_pr
+        uses: actions/github-script@v3
+        with:
+          script: |
+            const { data: pullRequests } = await github.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              head: `${context.repo.owner}:${context.ref.replace('refs/heads/', '')}`
+            });
+            return pullRequests.length > 0;
+
+      - name: Create pull request
+        if: steps.check_pr.outputs.result == 'false'
+        uses: vsoch/pull-request-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH_PREFIX: "feature/"
+          PULL_REQUEST_BRANCH: "develop"
