@@ -6,31 +6,45 @@ name: Pull Request on Branch Push
 on:
   push:
     branches: 'feature/*'
+
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   auto-pull-request:
     name: PullRequestAction
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Check for existing pull requests
-        id: check_pr
-        uses: actions/github-script@v3
+      - name: Create pull request
+        uses: actions/github-script@v7
         with:
           script: |
-            const { data: pullRequests } = await github.pulls.list({
+            const branch = context.ref.replace('refs/heads/', '');
+            const base = 'dev';
+
+            // Check if PR already exists
+            const { data: pulls } = await github.rest.pulls.list({
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: 'open',
-              head: `${context.repo.owner}:${context.ref.replace('refs/heads/', '')}`
+              head: `${context.repo.owner}:${branch}`,
+              base: base
             });
-            return pullRequests.length > 0;
 
-      - name: Create pull request
-        if: steps.check_pr.outputs.result == 'false'
-        uses: vsoch/pull-request-action@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BRANCH_PREFIX: "feature/"
-          PULL_REQUEST_BRANCH: "develop"
+            if (pulls.length > 0) {
+              console.log(`PR already exists: ${pulls[0].html_url}`);
+              return;
+            }
+
+            // Create PR
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Update from ${branch}`,
+              body: `This is an automated pull request to update from branch ${branch}`,
+              head: branch,
+              base: base
+            });
+
+            console.log(`Created PR: ${pr.html_url}`);
