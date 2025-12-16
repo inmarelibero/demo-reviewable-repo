@@ -1,6 +1,7 @@
 # Create a PR when a feature/* branch is pushed
 #
-# @dev if the pushed branch is already involved in an existing PR, a new PR will not be created
+# @dev Remember to go to Settings -> Actions and set "Allow GitHub Actions to create and approve pull requests"
+# @dev If the pushed branch is already involved in an existing PR, a new PR will not be created
 
 name: Pull Request on Branch Push
 on:
